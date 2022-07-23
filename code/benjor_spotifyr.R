@@ -143,6 +143,8 @@ benjor %>%
        title = "Relation between acousticness and valence") +
   theme_minimal()
 
+## fitting a model
+
 ## most used key   
 benjor %>%
   count(key_name, sort = TRUE) %>%

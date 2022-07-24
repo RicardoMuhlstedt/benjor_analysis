@@ -1,0 +1,167 @@
+---
+title: "Analysis of the Jorge Ben Jor data from the spotiyr packages"
+author: "Ricardo Mühlstedt"
+date: '2022-07-23'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      collapse = TRUE)
+library(tidyverse)
+library(spotifyr)
+library(lubridate)
+library(modelr)
+```
+
+## Abstract
+Jorge Ben Jor is one of the greatest artists from Brazil, widely known for
+the MPB, Bossa nova, Samba-rock e Sambalanço genres.  
+I decided to realize an analysis of his tracks and albums on Spotify, utilizing the spotifyr package, to get an insight into his musical stats and share my findings.
+
+## Introduction
+The spotifyr package lets me load all data from the Spotify API. 
+
+```{r raw_data}
+benjor <- get_artist_audio_features("Jorge Ben Jor") %>%
+  mutate(time_signature = as.factor(time_signature))
+```
+
+There`s a lot of data here, but we can filter it out, only selecting the most interesting, like the cheeriest songs, 
+measured by the valence value, the most danceable music, or event the liveliest, measured by the musical energy.
+
+```{r top_5_valence}
+benjor %>%
+  arrange(-valence) %>%
+  select(track_name, valence, album_name) %>%
+  head(5) %>%
+  knitr::kable()
+```
+```{r top_5_danceability}
+
+benjor %>%
+  arrange(-danceability) %>%
+  select(track_name, danceability) %>%
+  head(5) %>%
+  knitr::kable()
+```
+```{r top_5_energy}
+
+benjor %>%
+  arrange(-energy) %>%
+  select(track_name, energy) %>%
+  head(5) %>%
+  knitr::kable()
+```
+
+Having seen all this data sparks a lot of questions about it.
+Which are the most common keys?
+*  Does the danceability vary with the change in valence?
+*  What is the relation between acousticnesss and valence?
+*  Is there a specific tempo that is more used?
+I will address all these questions and show some phases of my exploratory data analysis and my thought process throughout the entirety of the exploration. 
+
+## Results
+When exploring, I found an interesting pattern, a strong correlation of variables. The musical energy seems to influence the valence value as the energy levels rise, and so does the valence.
+Strong covariation impact other relations, so how the variables behave, I must remove strong correlation to precisely how the data varies.
+
+```{r plot_energy_valence}
+
+benjor %>%
+  ggplot(aes(energy, valence)) +
+  geom_point(size = 2, color  = "#5ab4ac") +
+  geom_smooth(color  = "#756bb1") +
+  labs(x = "Energy",
+       y = "Valence",
+       title = "Relation between musical energy and valence") +
+  theme_minimal()
+```
+
+As you can see, the pattern is easily recognized.
+To remove the pattern, I inserted a model that generalizes the variation and then used the residuals as my new dataset. The residuals are all the data that don't fit into the model and are not displayed, utilizing the residuals as my new data set, essentially making the data unbiased.
+With the relation removed,  defining a model showing the pattern between acousticness and valence becomes possible.
+
+```{r model_energy_valence}
+## removed relation 
+mod1 <- lm(energy ~ valence, benjor)
+
+resid_benjor <- benjor %>%
+  select(track_name, valence, energy, danceability, loudness, acousticness) %>%
+  add_residuals(mod1) %>%
+  mutate(resid = exp(resid))
+
+mod2 <- lm(resid ~ splines::ns(acousticness, 5) , resid_benjor)
+
+
+grid <- resid_benjor %>%
+  data_grid(acousticness) %>%
+  add_predictions(mod2)
+
+
+grid2 <- resid_benjor %>%
+  add_residuals(mod2)
+```
+```{r ploting_acousticness_and_valence}
+
+resid_benjor %>%
+  ggplot(aes(acousticness, resid)) +
+  geom_line(aes(y = pred), data = grid, size = 1.5, color  = "#756bb1") +
+  labs(x = "Acousticness",
+       y = "resid(Valence)",
+       title = "Relation between acousticness and valence") +
+  theme_minimal()
+```
+
+The reason the pattern exists may be because the artist uses acousticness to represent sadness, sorrow, or any negative
+emotion, as most of the work by Ben Jor is gleeful and bright with a decent level of acousticness.
+There is no way of determining it by analyzing only the work of Jorge Ben Jor. The conclusion would be biased and not scientific.
+
+It is reasonable to find the most used keys, to demonstrate how he explores the musical theory in his pieces.
+
+```{r key_hist}
+ 
+benjor %>%
+  count(key_name, sort = TRUE) %>%
+  ggplot(aes(reorder(key_name, n), n)) +
+  geom_bar(stat = "identity", fill  = "#a6bddb") +
+  geom_text(aes(label = n)) +
+  scale_y_continuous(labels = NULL) +
+  labs(x = "Key name",
+       y = "Count",
+       title = "Ratio of used keys") +
+  theme_minimal()
+```
+
+Ben Jor is a well roudned musician, managing to diverse a lot his use of key and instruments on his band and concerts, with a lot of experience and releases.
+
+Diving into his style and finding the ratio of valence in his tracks is essential. Samba-rock, MPB, and Sambalanço genres are generally energetic, diverse, high tempo and happy. Those characteristics must show in his work.
+
+```{r valence_hist}
+
+benjor %>%
+  ggplot(aes(valence)) +
+  geom_histogram(binwidth = .03, fill = "#dd1c77") +
+  labs(x = "Valence",
+       y = "Count",
+       title = "Ratio of valence") +
+  theme_minimal()
+```
+```{r tempo_hist}
+
+benjor %>%
+  ggplot(aes(tempo)) +
+  geom_histogram(binwidth = 4, fill = "#c994c7") +
+  labs(x = "Tempo",
+       y = "Count",
+       title = "Ratio of time signature") +
+  theme_minimal()
+```
+
+All the characteristics are here, as we expected.
+
+
+
+

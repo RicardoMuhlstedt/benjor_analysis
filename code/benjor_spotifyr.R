@@ -39,7 +39,6 @@ benjor %>%
   head(5) %>%
   knitr::kable()
 
-
 ## features by album
 album_mean <- benjor %>%
   group_by(album_name) %>%
@@ -57,8 +56,6 @@ sorted_mean <- album_mean %>%
   arrange(-mean_valence)
 
 
-  
-
 ## relation between danceability and valence
 sorted_mean %>%
   ggplot(aes(mean_danceability, mean_valence)) +
@@ -66,84 +63,102 @@ sorted_mean %>%
   geom_smooth()
 
 
-
-## relation between energy and valence   
-sorted_mean %>%
-  ggplot(aes(mean_energy, mean_valence)) +
-  geom_point(aes()) +
-  geom_smooth()
-
-
-
 ## relation between loudness and valence
 benjor %>%
   ggplot(aes(valence, loudness)) +
-  geom_point(aes(color = key_name)) +
-  geom_smooth()
+  geom_point(color = "#5ab4ac", size = 2) +
+  geom_smooth(color  = "#756bb1") +
+  labs(x = "Valence",
+       y = "Loudness",
+       title = "Relation between loudness and valence") +
+  theme_minimal()
 
 ## between energy and valence
 benjor %>%
   ggplot(aes(energy, valence)) +
-  geom_point(aes()) +
-  geom_smooth()
+  geom_point(size = 2, color  = "#5ab4ac") +
+  geom_smooth(color  = "#756bb1") +
+  labs(x = "Energy",
+       y = "Valence",
+       title = "Relation between musical energy and valence") +
+  theme_minimal()
 
 ## removed relation 
 mod1 <- lm(energy ~ valence, benjor)
 
 resid_benjor <- benjor %>%
-  select(track_name, valence, energy, danceability, loudness) %>%
+  select(track_name, valence, energy, danceability, loudness, acousticness) %>%
   add_residuals(mod1) %>%
   mutate(resid = exp(resid))
 
 ## ploting energy with relation removed
 resid_benjor %>%
   ggplot(aes(energy, resid)) +
-  geom_point(aes())
+  geom_point(size = 2, color = "#5ab4ac") +
+  labs(x = "Musical energy",
+       y = "resid(Valence)",
+       title = "Ploting energy with relation removed") +
+  theme_minimal()
 
 
-## remove relation
-benjor %>%
-  ggplot(aes(danceability, valence)) +
-  geom_point() +
-  geom_smooth()
+## trying to find relation between danceability and valence
+resid_benjor %>%
+  ggplot(aes(danceability, resid)) +
+  geom_point(size = 2, color  = "#5ab4ac") +
+  labs(x = "Danceability",
+       y = "resid(Valence",
+       title = "Residual of danceability and valence") +
+  theme_minimal()
 
-
-## relation between acousticness and valence
+## relation between acousticness and resid valence
+resid_benjor %>%
+  ggplot(aes(acousticness, resid)) +
+  geom_hex(bins = 20) +
+  labs(x = "Acousticness",
+       y = "resid(Valence)",
+       title = "Searching for patterns after removing relation with musical energy") +
+  viridis::scale_fill_viridis() +
+  theme_minimal()
 
 ## creating model
-mod2 <- lm(valence ~ splines::ns(acousticness, 5) , benjor)
+mod2 <- lm(resid ~ splines::ns(acousticness, 5) , resid_benjor)
 
 ## adding predictions
-grid <- benjor %>%
+grid <- resid_benjor %>%
   data_grid(acousticness) %>%
   add_predictions(mod2)
 
 ## adding residuals
-grid2 <- benjor %>%
+grid2 <- resid_benjor %>%
   add_residuals(mod2)
 
 ## fitting the model
-benjor %>%
-  ggplot(aes(acousticness, valence)) +
+resid_benjor %>%
+  ggplot(aes(acousticness, resid)) +
   geom_point(size = 2.5, color = "#5ab4ac") +
-  geom_line(aes(y = pred), data = grid, size = 1.5, color  = "#756bb1")
-  
+  geom_line(aes(y = pred), data = grid, size = 1.5, color  = "#756bb1") +
+  labs(x = "Acousticness",
+       y = "resid(Valence)",
+       title = "Checking for fitting") +
+  theme_minimal()
 
 ## checking for a pattern on the residuals
 grid2 %>%
   ggplot(aes(acousticness, resid)) +
-  geom_point(aes(color = key_name), size = 2.5)
-
-## ploting valence and acousticness
-benjor %>%
-  ggplot(aes(acousticness, valence)) +
-  geom_line(aes(y = pred), data = grid, size = 1, color  = "#756bb1") +
+  geom_hex(bins = 20) +
   labs(x = "Acousticness",
-       y = "Valence",
-       title = "Relation between acousticness and valence") +
+       y = "resid(Valence)",
+       title = "Checking for a pattern on the residuals") +
   theme_minimal()
 
-## fitting a model
+## ploting valence and acousticness
+resid_benjor %>%
+  ggplot(aes(acousticness, resid)) +
+  geom_line(aes(y = pred), data = grid, size = 1.5, color  = "#756bb1") +
+  labs(x = "Acousticness",
+       y = "resid(Valence)",
+       title = "Relation between acousticness and valence") +
+  theme_minimal()
 
 ## most used key   
 benjor %>%
@@ -189,8 +204,8 @@ benjor %>%
 benjor %>%
   ggplot(aes(valence)) +
   geom_freqpoly(aes(color = time_signature)) +
-  viridis::scale_color_viridis(discrete = TRUE) +
-  scale_color_discrete(name = "Time signature") +
+  viridis::scale_color_viridis(discrete = TRUE,
+                               name = "Time signature") +
   labs(x = "Valence",
        y = "Count",
        title = "Frequency of valence by time signature") +

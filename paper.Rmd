@@ -59,9 +59,13 @@ benjor %>%
 
 Having seen all this data sparks a lot of questions about it.
 Which are the most common keys?
+
 *  Does the danceability vary with the change in valence?
+
 *  What is the relation between acousticnesss and valence?
+
 *  Is there a specific tempo that is more used?
+
 I will address all these questions and show some phases of my exploratory data analysis and my thought process throughout the entirety of the exploration. 
 
 ## Results
@@ -85,7 +89,7 @@ To remove the pattern, I inserted a model that generalizes the variation and the
 With the relation removed,  defining a model showing the pattern between acousticness and valence becomes possible.
 
 ```{r model_energy_valence}
-## removed relation 
+
 mod1 <- lm(energy ~ valence, benjor)
 
 resid_benjor <- benjor %>%

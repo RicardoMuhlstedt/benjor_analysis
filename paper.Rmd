@@ -3,9 +3,9 @@ title: "Analysis of the Jorge Ben Jor data from the spotiyr packages"
 author: "Ricardo Mühlstedt"
 date: '2022-07-23'
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -31,7 +31,7 @@ benjor <- get_artist_audio_features("Jorge Ben Jor") %>%
 ```
 
 There`s a lot of data here, but we can filter it out, only selecting the most interesting, like the cheeriest songs, 
-measured by the valence value, the most danceable music, or event the liveliest, measured by the musical energy.
+measured by the valence value, the most danceable music, or even the liveliest, measured by the musical energy.
 
 ```{r top_5_valence}
 benjor %>%
